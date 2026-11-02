@@ -209,8 +209,10 @@
       };
       if (fileId) {
         try {
-          VA.onended = fin; VA.onerror = tts;
-          VA.src = `voz/${fileId}.mp3`;
+          const ruta = [`voz/${fileId}.mp3`, `${fileId}.mp3`, `voz/voz/${fileId}.mp3`]; let ri = 0;
+          VA.onended = fin;
+          VA.onerror = () => { ri++; if (ri < ruta.length) { VA.src = ruta[ri]; const q = VA.play(); if (q && q.catch) q.catch(() => {}); } else tts(); };
+          VA.src = ruta[0];
           const p = VA.play(); if (p && p.catch) p.catch(tts);
         } catch (e) { tts(); }
       } else tts();
@@ -366,11 +368,24 @@
   }
   requestAnimationFrame(loop);
 
+  /* ===================== imágenes: prueba rutas alternativas ===================== */
+  function loadImg(img, src) {
+    const base = src.split('/').pop();
+    const tries = [src, base, 'fotos/fotos/' + base, base.replace(/\.jpg$/i, '.jpeg'), 'fotos/' + base.replace(/\.jpg$/i, '.jpeg'), 'fotos/' + base.toUpperCase(), 'foto/' + base, 'imagenes/' + base];
+    let i = 0;
+    img.onerror = () => {
+      i++;
+      if (i < tries.length) img.src = tries[i];
+      else { img.onerror = null; img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="700"><rect width="600" height="700" fill="#2a2f55"/><text x="300" y="340" fill="#ffcf5a" font-family="monospace" font-size="26" text-anchor="middle">No encuentro la foto</text><text x="300" y="385" fill="#eaeeff" font-family="monospace" font-size="24" text-anchor="middle">${src}</text></svg>`); }
+    };
+    img.src = tries[0];
+  }
+
   /* ===================== recuerdos ===================== */
   const start = new Date(D.inicio[0], D.inicio[1], D.inicio[2]);
   function showCard(p, i) {
     const d = new Date(D.inicio[0], D.inicio[1] + i + 1, D.inicio[2]);
-    $('mImg').src = p.foto; $('mC1').textContent = `Mes ${pad(i + 1)}`; $('mC2').textContent = fmtDate(d);
+    loadImg($('mImg'), p.foto); $('mC1').textContent = `Mes ${pad(i + 1)}`; $('mC2').textContent = fmtDate(d);
     $('mEy').textContent = `Escala ${pad(i + 1)} · ${p.fix}`; $('mTit').textContent = p.titulo;
     const poem = (p.poema && p.poema.length) ? p.poema : [p.texto];
     $('mPoem').innerHTML = poem.map(l => String(l).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))).join('<br>');
@@ -429,7 +444,7 @@
     $('c-d').textContent = d; $('c-h').textContent = pad(Math.floor(s / 3600)); $('c-m').textContent = pad(Math.floor(s % 3600 / 60)); $('c-s').textContent = pad(s % 60);
   }
   function showFinal() {
-    $('fImg').src = D.fotoFinal; $('fLetter').textContent = D.carta; $('fSign').textContent = D.firma;
+    loadImg($('fImg'), D.fotoFinal); $('fLetter').textContent = D.carta; $('fSign').textContent = D.firma;
     buildSunflower(); tick(); setInterval(tick, 1000);
     const f = $('fin'); f.hidden = false; f.scrollTop = 0;
     setTimeout(() => { $('sf').classList.add('bloom'); setTimeout(() => $('sf').classList.add('sway'), 3200); arpeggio(); }, 900);
